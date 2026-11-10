@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "version": "${project.version}",
+  "platformSdkVersion": "${platform.sdk.min.version}",
+  "plugins": [
+    {
+      "class": "dev.nuclr.plugin.core.panel.redis.RedisFilePanelPlugin",
+      "type": "FilePanel",
+      "id": "dev.nuclr.plugin.core.panel.redis",
+      "name": "Redis Explorer",
+      "version": "${project.version}",
+      "description": "Browse Redis: connections, databases and keys, grouped by ':' into folders. Strings, hashes, lists, sets, sorted sets and streams open in Quick View; F4 edits a value, F8 deletes keys.",
+      "author": "Nuclr Development Team",
+      "license": "Apache-2.0",
+      "website": "https://nuclr.dev",
+      "pageUrl": "https://github.com/nuclrdev/plugin-filepanel-redis",
+      "docUrl": "https://github.com/nuclrdev/plugin-filepanel-redis",
+      "developer": "Official",
+      "singleton": false,
+      "connections": true
+    },
+    {
+      "class": "dev.nuclr.plugin.core.panel.redis.RedisQuickViewPlugin",
+      "type": "QuickView",
+      "id": "dev.nuclr.plugin.core.panel.redis.quickview",
+      "name": "Redis Value Viewer",
+      "version": "${project.version}",
+      "description": "Quick View for a Redis key: the text of a string, the fields of a hash, the items of a list, set or sorted set, and the newest entries of a stream.",
+      "author": "Nuclr Development Team",
+      "license": "Apache-2.0",
+      "website": "https://nuclr.dev",
+      "pageUrl": "https://github.com/nuclrdev/plugin-filepanel-redis",
+      "docUrl": "https://github.com/nuclrdev/plugin-filepanel-redis",
+      "developer": "Official",
+      "singleton": true,
+      "priority": 5
+    }
+  ]
+}

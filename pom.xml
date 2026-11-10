@@ -1,0 +1,261 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>dev.nuclr.plugin.core</groupId>
+
+	<artifactId>filepanel-redis</artifactId>
+
+	<version>1.0.0</version>
+
+	<name>Nuclr File Panel - Redis Explorer</name>
+
+	<properties>
+		<platform.sdk.version>6.1.0</platform.sdk.version>
+		<platform.sdk.min.version>5.0.0</platform.sdk.min.version>
+		<maven.compiler.source>25</maven.compiler.source>
+		<maven.compiler.target>25</maven.compiler.target>
+		<jedis.version>7.0.0</jedis.version>
+		<jarsigner.keystorepath>C:/nuclr/key/nuclr-signing.p12</jarsigner.keystorepath>
+		<jarsigner.keyalias>nuclr</jarsigner.keyalias>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>dev.nuclr</groupId>
+			<artifactId>platform-sdk</artifactId>
+			<version>${platform.sdk.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.46</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>tools.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>3.2.3</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.18</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Jedis: a small synchronous client with a binary-safe API (keys and values are
+		     byte arrays, so keys that are not UTF-8 still round-trip) and a connection
+		     pool, which lets the listing, the quick view and an edit's write-back run
+		     at once. Not provided by the host, so it and its dependencies ship in lib/. -->
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>${jedis.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>5.11.4</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	<build>
+		<!-- plugin.json declares the plugin version, so Maven substitutes it from
+		     the project version rather than it being maintained by hand. Nothing
+		     else is filtered. -->
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>plugin.json</include>
+				</includes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>plugin.json</exclude>
+				</excludes>
+			</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.5.6</version>
+				<configuration>
+					<!-- Keeps a test run from ever putting the connection editor or the
+					     password prompt on the developer's desktop. -->
+					<systemPropertyVariables>
+						<java.awt.headless>true</java.awt.headless>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.13.0</version>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>1.18.46</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+
+			<!-- Build the plugin jar (normal jar) -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.4.2</version>
+				<configuration>
+					<!-- Ensure stable jar name in the zip root -->
+					<finalName>${project.artifactId}-${project.version}</finalName>
+				</configuration>
+			</plugin>
+
+			<!-- Copy runtime dependencies into target/plugin/lib -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>3.10.0</version>
+				<executions>
+					<execution>
+						<id>copy-runtime-deps</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>
+								${project.build.directory}/plugin/lib</outputDirectory>
+							<includeScope>runtime</includeScope>
+							<excludeTransitive>false</excludeTransitive>
+							<stripVersion>false</stripVersion>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Copy plugin jar into target/plugin (zip root) -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<execution>
+						<id>copy-plugin-manifest</id>
+						<phase>package</phase>
+						<goals><goal>copy-resources</goal></goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/plugin</outputDirectory>
+							<resources><resource><directory>${project.build.outputDirectory}</directory><includes><include>plugin.json</include></includes></resource></resources>
+						</configuration>
+					</execution>
+					<execution>
+						<id>copy-plugin-jar</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/plugin</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${project.build.directory}</directory>
+									<includes>
+										<include>${project.build.finalName}.jar</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>3.7.1</version>
+				<executions>
+					<execution>
+						<id>zip-plugin</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<finalName>${project.artifactId}-${project.version}</finalName>
+							<appendAssemblyId>false</appendAssemblyId>
+							<descriptors>
+								<descriptor>src/assembly/plugin.xml</descriptor>
+							</descriptors>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Create detached signature (.sig) for the plugin ZIP -->
+			<plugin>
+				<groupId>org.codehaus.gmavenplus</groupId>
+				<artifactId>gmavenplus-plugin</artifactId>
+				<version>4.0.1</version>
+				<executions>
+					<execution>
+						<id>sign-zip</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<scripts>
+								<script><![CDATA[
+import java.security.*
+
+def storepass = System.getProperty('jarsigner.storepass') ?: project.properties['jarsigner.storepass']
+def keystorePath = System.getProperty('jarsigner.keystorepath') ?: project.properties['jarsigner.keystorepath']
+def keyAlias = System.getProperty('jarsigner.keyalias') ?: project.properties['jarsigner.keyalias']
+def ks = KeyStore.getInstance("PKCS12")
+new FileInputStream(keystorePath).withStream {
+	ks.load(it, storepass.toCharArray())
+}
+
+def key = ks.getKey(keyAlias, storepass.toCharArray())
+def sig = Signature.getInstance("SHA256withRSA")
+sig.initSign(key)
+
+def zipFile = new File(project.build.directory, "${project.artifactId}-${project.version}.zip")
+sig.update(zipFile.bytes)
+
+def sigFile = new File(project.build.directory, "${project.artifactId}-${project.version}.zip.sig")
+sigFile.bytes = sig.sign()
+
+log.info("Signed: ${zipFile.name} -> ${sigFile.name}")
+								]]></script>
+							</scripts>
+						</configuration>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.groovy</groupId>
+						<artifactId>groovy</artifactId>
+						<version>5.0.8</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+
+		</plugins>
+	</build>
+
+</project>
