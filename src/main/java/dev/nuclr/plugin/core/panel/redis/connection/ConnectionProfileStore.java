@@ -18,6 +18,7 @@
 package dev.nuclr.plugin.core.panel.redis.connection;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -71,6 +72,40 @@ public final class ConnectionProfileStore {
 		} catch (Exception e) {
 			log.error("Failed to save Redis connection profiles.", e);
 		}
+	}
+
+	/**
+	 * Append {@code profiles} (ids already set) in one write. Unlike {@link #saveAll} this
+	 * throws: when the saved list cannot be read it is left alone rather than replaced, and a
+	 * failed write is reported, so the caller (Commander's import) knows the store is unchanged.
+	 */
+	public synchronized void addAll(List<RedisConnectionProfile> profiles) {
+		var all = loadStrictly();
+		all.addAll(profiles);
+		write(all);
+	}
+
+	/** Remove the profiles with these ids in one write; throws like {@link #addAll}. */
+	public synchronized void removeAll(Collection<String> ids) {
+		var all = loadStrictly();
+		all.removeIf(p -> p.getId() != null && ids.contains(p.getId()));
+		write(all);
+	}
+
+	private List<RedisConnectionProfile> loadStrictly() {
+		String json = settings.get(PluginIds.PLUGIN_ID, KEY_PROFILES_JSON);
+		if (json == null || json.isBlank()) {
+			return new ArrayList<>();
+		}
+		try {
+			return new ArrayList<>(List.of(mapper.readValue(json, RedisConnectionProfile[].class)));
+		} catch (Exception e) {
+			throw new IllegalStateException("The saved Redis connections cannot be read; not changing them", e);
+		}
+	}
+
+	private void write(List<RedisConnectionProfile> profiles) {
+		settings.set(PluginIds.PLUGIN_ID, KEY_PROFILES_JSON, mapper.writeValueAsString(profiles));
 	}
 
 	public synchronized RedisConnectionProfile findById(String id) {

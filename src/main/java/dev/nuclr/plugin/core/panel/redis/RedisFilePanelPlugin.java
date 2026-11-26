@@ -68,6 +68,7 @@ import dev.nuclr.plugin.core.panel.redis.keys.KeyTree;
 import dev.nuclr.plugin.core.panel.redis.panel.ConnectionEditorDialog;
 import dev.nuclr.plugin.core.panel.redis.resource.RedisResource;
 import dev.nuclr.plugin.core.panel.redis.resource.ResourceKind;
+import dev.nuclr.plugin.core.panel.redis.transfer.RedisTransfer;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -128,6 +129,7 @@ public final class RedisFilePanelPlugin implements FilePanelNuclrPlugin {
 	private NuclrPluginContext context;
 	private ConnectionProfileStore profileStore;
 	private CredentialStore credentialStore;
+	private RedisTransfer transfer;
 	private ConnectionRegistry connectionRegistry;
 	private ValueEditService editService;
 
@@ -162,6 +164,7 @@ public final class RedisFilePanelPlugin implements FilePanelNuclrPlugin {
 		this.context = context;
 		this.profileStore = new ConnectionProfileStore(context.getSettings());
 		this.credentialStore = new CredentialStore(context.getCredentialStore());
+		this.transfer = new RedisTransfer(profileStore, credentialStore);
 		this.connectionRegistry = sessionFactory == null ? new ConnectionRegistry()
 				: new ConnectionRegistry(sessionFactory);
 		this.editService = new ValueEditService(this::writeKey, new ValueEditService.Prompts() {
@@ -668,6 +671,11 @@ public final class RedisFilePanelPlugin implements FilePanelNuclrPlugin {
 	@Override
 	public void act(BaseNuclrPlugin other, String actionType, List<NuclrResource> selectedResources,
 			NuclrResource focusedResource, Map<String, Object> data, NuclrPluginCallback callback) {
+		// Configs > Export / Import in Commander: saved connections in and out.
+		if (RedisTransfer.handles(actionType)) {
+			transfer.handle(actionType, data);
+			return;
+		}
 		switch (actionType) {
 			case ActionNewConnection -> handleNewConnection(data);
 			case ActionEditConnection -> handleEditConnection(focusedResource, data);

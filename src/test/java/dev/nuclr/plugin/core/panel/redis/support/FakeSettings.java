@@ -27,8 +27,14 @@ public final class FakeSettings implements NuclrSettings {
 
 	private final Map<String, Object> values = new HashMap<>();
 
+	/** Make every {@link #set} throw, the way a full disk or a read-only settings file does. */
+	public boolean failWrites;
+
 	@Override
 	public void set(String namespace, String key, Object value) {
+		if (failWrites) {
+			throw new IllegalStateException("settings cannot be written");
+		}
 		values.put(namespace + "|" + key, value);
 	}
 
